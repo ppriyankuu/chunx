@@ -57,6 +57,7 @@ export class PeerConnection {
 
   async startHandshake() {
     if (this.role !== 'initiator') throw new Error('Only initiator calls startHandshake')
+
     const dc = this.pc.createDataChannel(DATACHANNEL_LABEL, { ordered: true })
     this.attachDataChannel(dc)
     const offer = await this.pc.createOffer()
