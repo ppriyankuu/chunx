@@ -11,7 +11,7 @@ This phase creates a typed WebSocket wrapper that handles all communication with
 Create this file:
 
 ```typescript
-// client/src/lib/signalingClient.ts
+// client/lib/signalingClient.ts
 
 import { ClientMessage, ServerMessage } from './types'
 
