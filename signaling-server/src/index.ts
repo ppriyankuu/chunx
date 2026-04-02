@@ -4,7 +4,7 @@ import { handleMessage, handleClose } from './relay';
 import { send } from './types';
 
 
-const PORT = process.env.PORT ?? 8080;
+const PORT = process.env.PORT ?? 8081;
 
 // 1. Basic HTTP Server (for health checks / deployment)
 const httpServer = createServer((req, res) => {
