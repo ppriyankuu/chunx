@@ -1,5 +1,5 @@
 import streamSaver from 'streamsaver'
-import { ReceiveProgress } from './types'
+import { DataChannelControlMessage, ReceiveProgress } from './types'
 
 export class FileReceiver {
   private writer: WritableStreamDefaultWriter<Uint8Array> | null = null
@@ -14,7 +14,7 @@ export class FileReceiver {
 
   handleMessage(data: string | ArrayBuffer): boolean {
     if (typeof data === 'string') {
-      const msg = JSON.parse(data) as any
+      const msg = JSON.parse(data) as DataChannelControlMessage
       if (msg.type === 'FILE_START') {
         this.handleFileStart(msg)
         return true
@@ -26,11 +26,11 @@ export class FileReceiver {
     } else {
       if (!this.writer) return false
       const chunk = new Uint8Array(data)
-      
+
       // Streams directly to disk!
       this.writer.write(chunk)
       this.bytesReceived += chunk.byteLength
-      
+
       this.onProgress?.({
         bytesReceived: this.bytesReceived,
         totalBytes: this.totalBytes,
@@ -42,17 +42,24 @@ export class FileReceiver {
     return false
   }
 
-  private handleFileStart(msg: any) {
+  private handleFileStart(msg: {
+    type: 'FILE_START'
+    name: string
+    size: number
+    mimeType: string
+  }) {
     this.fileName = msg.name
     this.totalBytes = msg.size
     this.bytesReceived = 0
+
     const fileStream = streamSaver.createWriteStream(msg.name, { size: msg.size })
     this.writer = fileStream.getWriter()
   }
 
-  private handleFileEnd(msg: any) {
+  private handleFileEnd(msg: { type: 'FILE_END'; name: string }) {
     this.writer?.close()
     this.writer = null
+
     this.onComplete?.(msg.name)
   }
 
