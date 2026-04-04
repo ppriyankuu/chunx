@@ -1,13 +1,15 @@
 import type { AppProps } from 'next/app'
 import { useEffect } from 'react'
-import streamSaver from 'streamsaver'
-import '../styles/globals.css' // Keeps your default Next.js styling
+import '../styles/globals.css'
 
 export default function App({ Component, pageProps }: AppProps) {
   useEffect(() => {
-    // This tells StreamSaver where our hidden service worker is
-    streamSaver.mitm = '/mitm.html'
-  }, [])
+    // Dynamically import StreamSaver so it ONLY runs in the browser
+    import('streamsaver').then((module) => {
+      const streamSaver = module.default || module;
+      streamSaver.mitm = '/mitm.html';
+    });
+  }, []);
 
   return <Component {...pageProps} />
 }

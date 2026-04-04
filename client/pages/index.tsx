@@ -1,78 +1,228 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { useState } from 'react'
+import { useRouter } from 'next/router'
+import { SignalingClient } from '@/lib/signalingClient'
 
 export default function Home() {
+  const router = useRouter()
+  const [joinCode, setJoinCode] = useState('')
+  const [error, setError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  // ============================================================================
+  // CREATE SESSION
+  // ============================================================================
+
+  function handleCreate() {
+    setIsLoading(true)
+    setError('')
+
+    // Using port 8081
+    const signaling = new SignalingClient('ws://localhost:8081')
+    
+    const unsub = signaling.onMessage((msg) => {
+      if (msg.type === 'SESSION_CREATED') {
+        unsub()
+        signaling.close()
+        setIsLoading(false)
+        
+        router.push(`/session/${msg.code}?role=initiator`)
+      }
+    })
+
+    signaling.send({ type: 'CREATE_SESSION' })
+  }
+
+  // ============================================================================
+  // JOIN SESSION
+  // ============================================================================
+
+  function handleJoin() {
+    const code = joinCode.trim().toUpperCase()
+    
+    if (code.length !== 5) {
+      setError('Enter a 5-character code')
+      return
+    }
+
+    setIsLoading(true)
+    setError('')
+
+    // Using port 8081
+    const signaling = new SignalingClient('ws://localhost:8081')
+    
+    const unsub = signaling.onMessage((msg) => {
+      if (msg.type === 'SESSION_JOINED') {
+        unsub()
+        signaling.close()
+        setIsLoading(false)
+        
+        router.push(`/session/${msg.code}?role=answerer`)
+      }
+      
+      if (msg.type === 'SESSION_NOT_FOUND') {
+        setError('Code not found')
+        signaling.close()
+        setIsLoading(false)
+      }
+      
+      if (msg.type === 'SESSION_FULL') {
+        setError('Session already has two people')
+        signaling.close()
+        setIsLoading(false)
+      }
+    })
+
+    signaling.send({ type: 'JOIN_SESSION', code })
+  }
+
+  // ============================================================================
+  // HANDLE ENTER KEY
+  // ============================================================================
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'Enter') {
+      handleJoin()
+    }
+  }
+
+  // ============================================================================
+  // RENDER
+  // ============================================================================
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
-    >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <main style={{
+      maxWidth: 480,
+      margin: '80px auto',
+      padding: 32,
+      fontFamily: 'system-ui, -apple-system, sans-serif',
+    }}>
+      {/* Header */}
+      <h1 style={{
+        fontSize: 32,
+        fontWeight: 600,
+        marginBottom: 8,
+        textAlign: 'center',
+        color: '#111827',
+      }}>
+        Chunx
+      </h1>
+      
+      <p style={{
+        textAlign: 'center',
+        color: '#6b7280',
+        marginBottom: 40,
+      }}>
+        Peer-to-peer file sharing — no server storage
+      </p>
+
+      {/* Create Session Button */}
+      <button
+        onClick={handleCreate}
+        disabled={isLoading}
+        style={{
+          display: 'block',
+          width: '100%',
+          padding: '14px 24px',
+          marginBottom: 32,
+          fontSize: 16,
+          fontWeight: 500,
+          color: 'white',
+          background: isLoading ? '#9ca3af' : '#2563eb',
+          border: 'none',
+          borderRadius: 8,
+          cursor: isLoading ? 'not-allowed' : 'pointer',
+          transition: 'background 0.2s',
+        }}
+      >
+        {isLoading ? 'Creating...' : 'Create session'}
+      </button>
+
+      {/* Divider */}
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: 24,
+      }}>
+        <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+        <span style={{ padding: '0 12px', color: '#9ca3af', fontSize: 14 }}>
+          or join existing
+        </span>
+        <div style={{ flex: 1, height: 1, background: '#e5e7eb' }} />
+      </div>
+
+      {/* Join Session Form */}
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          value={joinCode}
+          onChange={(e) => {
+            setJoinCode(e.target.value.toUpperCase())
+            setError('')
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder="Enter code"
+          maxLength={5}
+          disabled={isLoading}
+          style={{
+            flex: 1,
+            padding: '12px 16px',
+            fontSize: 16,
+            textTransform: 'uppercase',
+            letterSpacing: 4,
+            textAlign: 'center',
+            border: '1px solid #d1d5db',
+            borderRadius: 8,
+            outline: 'none',
+          }}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the index.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-39.5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/8 px-5 transition-colors hover:border-transparent hover:bg-black/4 dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-39.5"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+        <button
+          onClick={handleJoin}
+          disabled={isLoading || joinCode.length === 0}
+          style={{
+            padding: '12px 24px',
+            fontSize: 16,
+            fontWeight: 500,
+            color: 'white',
+            background: (isLoading || joinCode.length === 0) ? '#9ca3af' : '#2563eb',
+            border: 'none',
+            borderRadius: 8,
+            cursor: (isLoading || joinCode.length === 0) ? 'not-allowed' : 'pointer',
+            transition: 'background 0.2s',
+          }}
+        >
+          {isLoading ? 'Joining...' : 'Join'}
+        </button>
+      </div>
+
+      {/* Error Message */}
+      {error && (
+        <p style={{
+          color: '#dc2626',
+          marginTop: 16,
+          textAlign: 'center',
+          fontSize: 14,
+        }}>
+          {error}
+        </p>
+      )}
+
+      {/* Info */}
+      <div style={{
+        marginTop: 40,
+        padding: 16,
+        background: '#f3f4f6',
+        borderRadius: 8,
+        fontSize: 14,
+        color: '#4b5563',
+      }}>
+        <p style={{ margin: '0 0 8px', fontWeight: 500 }}>
+          How it works:
+        </p>
+        <ol style={{ margin: 0, paddingLeft: 20 }}>
+          <li>One person creates a session and shares the code</li>
+          <li>The other person enters the code to join</li>
+          <li>Files transfer directly between browsers</li>
+        </ol>
+      </div>
+    </main>
+  )
 }
