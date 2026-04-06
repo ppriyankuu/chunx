@@ -60,11 +60,7 @@ export function removePeer(ws: WebSocket): WebSocket | null {
     // filter out the closing peer
     const remaining = session.peers.filter((p) => p !== ws);
 
-    if (remaining.length == 0){
-        sessions.delete(code);
-    } else {
-        session.peers = remaining;
-    }
+    session.peers = remaining;
 
     return otherPeer;
 }

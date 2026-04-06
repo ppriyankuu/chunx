@@ -16,13 +16,13 @@ export class SignalingClient {
     ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data as string) as ServerMessage
-        
+
         // Auto-reply to server PING to keep connection alive
         if (msg.type === 'PING') {
           this.send({ type: 'PONG' })
           return
         }
-        
+
         this.handlers.forEach(h => h(msg))
       } catch {
         // Ignore malformed messages silently
@@ -30,19 +30,23 @@ export class SignalingClient {
     }
 
     ws.onerror = (err) => console.error('WebSocket error:', err)
-    ws.onclose = () => {}
+    ws.onclose = () => { }
 
     return ws
   }
 
-  send(msg: ClientMessage) {
+  send(msg: any) {
+    const data = JSON.stringify(msg);
     if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(msg))
+      // If ready, send immediately
+      this.ws.send(data);
     } else {
-      console.warn('WebSocket not open, message not sent:', msg)
+      // If still connecting, wait in line until it opens
+      this.ws.addEventListener('open', () => {
+        this.ws.send(data);
+      }, { once: true });
     }
   }
-
   onMessage(handler: MessageHandler): () => void {
     this.handlers.push(handler)
     return () => {
