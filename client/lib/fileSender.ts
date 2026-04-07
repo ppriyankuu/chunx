@@ -59,9 +59,13 @@ export async function sendFile({
     let offset = 0;
     let chunksSent = 0;
 
-
     // STEP 1: SEND METADATA
-    // Tell the receiver about the file before sending chunks
+    console.log('[SENDER] FILE_START:', {
+        name: file.name,
+        size: file.size,
+        mimeType: file.type || 'application/octet-stream',
+        totalChunks,
+    });
 
     const fileStartMessage: DataChannelControlMessage = {
         type: 'FILE_START',
@@ -75,27 +79,20 @@ export async function sendFile({
     // STEP 2: SEND CHUNKS ONE BY ONE WITH BACKPRESSURE
 
     while (offset < file.size) {
-        // check if transfer was cancelled
         if (signal?.aborted) {
             throw new DOMException('Transfer aborted', 'AbortError');
         }
 
-        // Backpressure check
-        // if buffer is too full, wait for it to drain
         if (dc.bufferedAmount > BUFFER_PAUSE_THRESHOLD) {
             await waitForBufferDrain(dc);
         }
 
-        // read next chunk from disk
-        // file.slize().arrayBuffer() reads only this 64Kb window from the disk
-        // the full file is NEVER loaded into memory at once
         const end = Math.min(offset + CHUNK_SIZE, file.size);
         const chunk = await file.slice(offset, end).arrayBuffer();
 
-        // send the chunk
+        console.log(`[SENDER] Sending chunk ${chunksSent + 1}/${totalChunks}, ${chunk.byteLength} bytes`);
         dc.send(chunk);
 
-        // update process
         offset = end;
         chunksSent++;
 
@@ -109,6 +106,7 @@ export async function sendFile({
     }
 
     // STEP 3: SIGNAL END OF FILE
+    console.log('[SENDER] FILE_END, total bytes sent:', offset);
 
     const fileEndMessage: DataChannelControlMessage = {
         type: 'FILE_END',

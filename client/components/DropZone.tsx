@@ -1,4 +1,5 @@
 import { useRef, useState, DragEvent, ChangeEvent } from 'react'
+import { Modal } from './Modal'
 
 interface Props {
   onFileSelected: (file: File) => void
@@ -7,10 +8,11 @@ interface Props {
 
 export function DropZone({ onFileSelected, disabled }: Props) {
   const [isDragging, setIsDragging] = useState(false)
+  const [showMultiModal, setShowMultiModal] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   function handleDragOver(e: DragEvent<HTMLDivElement>) {
-    e.preventDefault()  // Required — without this, drop won't fire
+    e.preventDefault()
     e.stopPropagation()
     if (!disabled) setIsDragging(true)
   }
@@ -27,17 +29,25 @@ export function DropZone({ onFileSelected, disabled }: Props) {
     e.preventDefault()
     e.stopPropagation()
     setIsDragging(false)
-    
+
     if (disabled) return
-    
-    const file = e.dataTransfer.files[0]
-    if (file) onFileSelected(file)
+
+    const files = e.dataTransfer.files
+    if (files.length > 1) {
+      setShowMultiModal(true)
+      return
+    }
+    if (files.length === 1) onFileSelected(files[0])
   }
 
   function handleChange(e: ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (file) onFileSelected(file)
-    e.target.value = '' // Reset so you can select the same file again later
+    const files = e.target.files
+    if (files && files.length > 1) {
+      setShowMultiModal(true)
+    } else if (files?.[0]) {
+      onFileSelected(files[0])
+    }
+    e.target.value = ''
   }
 
   return (
@@ -71,6 +81,14 @@ export function DropZone({ onFileSelected, disabled }: Props) {
         onChange={handleChange}
         disabled={disabled}
       />
+
+      {showMultiModal && (
+        <Modal
+          title="One file at a time, please!"
+          message="Chunx only handles one file per transfer. Drop or select a single file and we'll get it across fast."
+          onClose={() => setShowMultiModal(false)}
+        />
+      )}
     </div>
   )
 }

@@ -44,8 +44,9 @@ export type DataChannelControlMessage =
 // ============================================================================
 export type TransferState =
     | { phase: 'idle' }
-    | { phase: 'sending'; fileName: string; progress: number }  // 0–1
-    | { phase: 'receiving'; fileName: string; progress: number }  // 0–1
+    | { phase: 'incoming'; fileName: string; size: number }      // awaiting user accept (native FS)
+    | { phase: 'sending'; fileName: string; progress: number }   // 0–1
+    | { phase: 'receiving'; fileName: string; progress: number } // 0–1
     | { phase: 'done'; fileName: string; direction: 'sent' | 'received' }
 
 

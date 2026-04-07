@@ -14,6 +14,14 @@ type SessionPhase =
     | 'busy'
     | 'peer_disconnected'
 
+function formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+}
+
 export default function SessionPage() {
     const router = useRouter()
     const code = router.query.code as string
@@ -29,7 +37,6 @@ export default function SessionPage() {
     useEffect(() => {
         if (!code || !role) return
 
-        // UPDATED: Using 127.0.0.1 and port 8081
         const signaling = new SignalingClient('ws://127.0.0.1:8081')
         signalingRef.current = signaling
 
@@ -40,12 +47,28 @@ export default function SessionPage() {
 
         const receiver = receiverRef.current
 
-        receiver.onReceiveProgress((p) => {
+        // --- NEW: Incoming file prompt (native FS path only) ---
+        receiver.onIncomingFileReceived((meta) => {
             setTransfer({
-                phase: 'receiving',
-                fileName: p.fileName,
-                progress: p.percent / 100
+                phase: 'incoming',
+                fileName: meta.name,
+                size: meta.size,
             })
+            setPhase('busy')
+        })
+
+        receiver.onReceiveProgress((p) => {
+            setTransfer(prev => {
+                // Don't override 'incoming' — user hasn't accepted yet.
+                // Chunks are buffering in the background.
+                if (prev.phase === 'incoming') return prev
+                return {
+                    phase: 'receiving',
+                    fileName: p.fileName,
+                    progress: p.percent / 100,
+                }
+            })
+            setPhase('busy')
         })
 
         receiver.onReceiveComplete((fileName) => {
@@ -59,8 +82,7 @@ export default function SessionPage() {
 
         // --- Route all DataChannel messages through receiver ---
         peer.onMessage((msg) => {
-            // Pass the message directly exactly as it arrived!
-            receiver.handleMessage(msg as any)
+            receiver.handleMessage(msg as unknown)
         })
 
         peer.onOpen(() => {
@@ -70,14 +92,12 @@ export default function SessionPage() {
         const unsub = signaling.onMessage(async (msg: ServerMessage) => {
             switch (msg.type) {
                 case 'SESSION_JOINED':
-                    // Answerer gets this when they successfully join
                     if (role === 'answerer') {
                         setPhase('negotiating')
                     }
                     break
 
                 case 'PEER_JOINED':
-                    // Host gets this when the answerer arrives
                     if (role === 'initiator') {
                         setPhase('negotiating')
                         peer.startHandshake().catch(console.error)
@@ -114,6 +134,10 @@ export default function SessionPage() {
             signaling.close()
         }
     }, [code, role])
+
+    // -------------------------------------------------------------------------
+    // Handlers
+    // -------------------------------------------------------------------------
 
     async function handleFileSelected(file: File) {
         const dc = peerRef.current?.getDataChannel()
@@ -153,6 +177,19 @@ export default function SessionPage() {
             setPhase('connected')
         }
     }
+
+    /** Called from the "Save As" button — runs inside a click handler (user gesture). */
+    async function handleAcceptFile() {
+        setTransfer(prev => {
+            if (prev.phase !== 'incoming') return prev
+            return { phase: 'receiving', fileName: prev.fileName, progress: 0 }
+        })
+        await receiverRef.current.acceptFile()
+    }
+
+    // -------------------------------------------------------------------------
+    // Render
+    // -------------------------------------------------------------------------
 
     return (
         <main style={{
@@ -251,6 +288,57 @@ export default function SessionPage() {
                         disabled={phase === 'busy'}
                     />
 
+                    {/* ---------- Incoming file accept prompt (native FS) ---------- */}
+                    {transfer.phase === 'incoming' && (
+                        <div style={{
+                            marginTop: 24,
+                            padding: 20,
+                            background: '#eff6ff',
+                            borderRadius: 8,
+                            border: '1px solid #bfdbfe',
+                        }}>
+                            <p style={{
+                                margin: '0 0 4px',
+                                fontSize: 13,
+                                color: '#6b7280',
+                                fontWeight: 500,
+                            }}>
+                                📥 Incoming file
+                            </p>
+                            <p style={{
+                                margin: '0 0 4px',
+                                fontSize: 16,
+                                color: '#111827',
+                                fontWeight: 600,
+                            }}>
+                                {transfer.fileName}
+                            </p>
+                            <p style={{
+                                margin: '0 0 16px',
+                                fontSize: 13,
+                                color: '#6b7280',
+                            }}>
+                                {formatBytes(transfer.size)}
+                            </p>
+                            <button
+                                onClick={handleAcceptFile}
+                                style={{
+                                    padding: '8px 20px',
+                                    background: '#2563eb',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: 6,
+                                    cursor: 'pointer',
+                                    fontSize: 14,
+                                    fontWeight: 500,
+                                }}
+                            >
+                                Save As…
+                            </button>
+                        </div>
+                    )}
+
+                    {/* ---------- Sending progress ---------- */}
                     {transfer.phase === 'sending' && (
                         <div style={{ marginTop: 24 }}>
                             <p style={{ margin: '0 0 8px', fontSize: 14, color: '#374151' }}>
@@ -269,6 +357,7 @@ export default function SessionPage() {
                         </div>
                     )}
 
+                    {/* ---------- Receiving progress ---------- */}
                     {transfer.phase === 'receiving' && (
                         <div style={{ marginTop: 24 }}>
                             <p style={{ margin: '0 0 8px', fontSize: 14, color: '#374151' }}>
@@ -287,6 +376,7 @@ export default function SessionPage() {
                         </div>
                     )}
 
+                    {/* ---------- Done ---------- */}
                     {transfer.phase === 'done' && (
                         <div style={{
                             marginTop: 24, padding: 16,
