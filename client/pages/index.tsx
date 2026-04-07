@@ -36,7 +36,7 @@ export default function Home() {
   // JOIN SESSION
   // ============================================================================
 
-  function handleJoin() {
+function handleJoin() {
     const code = joinCode.trim().toUpperCase()
     
     if (code.length !== 5) {
@@ -44,35 +44,10 @@ export default function Home() {
       return
     }
 
+    // Bypass the "fake" join completely. 
+    // Let the Session Page handle the connection and error checking!
     setIsLoading(true)
-    setError('')
-
-    // Using port 8081
-    const signaling = new SignalingClient('ws://localhost:8081')
-    
-    const unsub = signaling.onMessage((msg) => {
-      if (msg.type === 'SESSION_JOINED') {
-        unsub()
-        signaling.close()
-        setIsLoading(false)
-        
-        router.push(`/session/${msg.code}?role=answerer`)
-      }
-      
-      if (msg.type === 'SESSION_NOT_FOUND') {
-        setError('Code not found')
-        signaling.close()
-        setIsLoading(false)
-      }
-      
-      if (msg.type === 'SESSION_FULL') {
-        setError('Session already has two people')
-        signaling.close()
-        setIsLoading(false)
-      }
-    })
-
-    signaling.send({ type: 'JOIN_SESSION', code })
+    router.push(`/session/${code}?role=answerer`)
   }
 
   // ============================================================================
