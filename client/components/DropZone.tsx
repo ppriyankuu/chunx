@@ -50,37 +50,43 @@ export function DropZone({ onFileSelected, disabled }: Props) {
     e.target.value = ''
   }
 
+  const borderClass = isDragging ? 'border-primary' : 'border-neutral-700/50 hover:border-neutral-500'
+  const bgClass = isDragging ? 'bg-primary/10' : 'bg-neutral-800/20 hover:bg-neutral-800/40'
+  const disabledClass = disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+
   return (
-    <div
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-      onClick={() => !disabled && inputRef.current?.click()}
-      style={{
-        border: `2px dashed ${isDragging ? '#6366f1' : '#ccc'}`,
-        borderRadius: 12,
-        padding: '48px 32px',
-        textAlign: 'center',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        background: isDragging ? '#eef2ff' : 'transparent',
-        transition: 'all 0.15s',
-        opacity: disabled ? 0.5 : 1,
-        userSelect: 'none',
-      }}
-    >
-      <p style={{ margin: 0, fontSize: 16, color: '#374151' }}>
-        {isDragging ? 'Drop it!' : 'Drag a file here, or click to browse'}
-      </p>
-      <p style={{ margin: '8px 0 0', fontSize: 14, color: '#9ca3af' }}>
-        Supports files of any size
-      </p>
-      <input
-        ref={inputRef}
-        type="file"
-        style={{ display: 'none' }}
-        onChange={handleChange}
-        disabled={disabled}
-      />
+    <>
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        onClick={() => !disabled && inputRef.current?.click()}
+        className={`relative overflow-hidden border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 select-none backdrop-blur-sm ${borderClass} ${bgClass} ${disabledClass}`}
+      >
+        <div className="relative z-10 flex flex-col items-center justify-center space-y-4">
+          <div className={`p-4 rounded-full bg-neutral-800/50 mb-2 transition-transform duration-300 ${isDragging ? 'scale-110' : 'scale-100'}`}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-400">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" x2="12" y1="3" y2="15"/>
+            </svg>
+          </div>
+          <p className="text-lg font-medium text-neutral-200">
+            {isDragging ? 'Drop it here!' : 'Drag a file here, or click to browse'}
+          </p>
+          <p className="text-sm text-neutral-500 font-medium">
+            Supports files of any size • End-to-end encrypted
+          </p>
+        </div>
+        
+        <input
+          ref={inputRef}
+          type="file"
+          className="hidden"
+          onChange={handleChange}
+          disabled={disabled}
+        />
+      </div>
 
       {showMultiModal && (
         <Modal
@@ -89,6 +95,6 @@ export function DropZone({ onFileSelected, disabled }: Props) {
           onClose={() => setShowMultiModal(false)}
         />
       )}
-    </div>
+    </>
   )
 }
