@@ -65,10 +65,10 @@ function handleJoin() {
   // ============================================================================
 
   return (
-    <main className="w-full max-w-[600px] mx-auto sm:my-20 p-8 flex flex-col relative z-20">
+    <main className="w-full max-w-150 mx-auto sm:my-20 p-8 flex flex-col relative z-20">
       
       <div 
-        className="relative rounded-3xl p-[1px] overflow-hidden shadow-2xl animate-shimmer"
+        className="relative rounded-3xl p-px overflow-hidden shadow-2xl animate-shimmer"
         style={{
           backgroundImage: "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(99,179,237,0.2), rgba(255,255,255,0.04))",
           backgroundSize: "200% 200%"
