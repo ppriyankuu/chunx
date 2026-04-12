@@ -18,13 +18,13 @@ export default function Home() {
 
     // Using port 8081
     const signaling = new SignalingClient('ws://localhost:8081')
-    
+
     const unsub = signaling.onMessage((msg) => {
       if (msg.type === 'SESSION_CREATED') {
         unsub()
         signaling.close()
         setIsLoading(false)
-        
+
         router.push(`/session/${msg.code}?role=initiator`)
       }
     })
@@ -36,9 +36,9 @@ export default function Home() {
   // JOIN SESSION
   // ============================================================================
 
-function handleJoin() {
+  function handleJoin() {
     const code = joinCode.trim().toUpperCase()
-    
+
     if (code.length !== 5) {
       setError('Enter a 5-character code')
       return
@@ -66,8 +66,8 @@ function handleJoin() {
 
   return (
     <main className="w-full max-w-150 mx-auto sm:my-20 p-8 flex flex-col relative z-20">
-      
-      <div 
+
+      <div
         className="relative rounded-3xl p-px overflow-hidden shadow-2xl animate-shimmer"
         style={{
           backgroundImage: "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(99,179,237,0.2), rgba(255,255,255,0.04))",
@@ -80,20 +80,19 @@ function handleJoin() {
           <h1 className="text-4xl sm:text-5xl font-bold mb-3 text-center tracking-[0.02em] text-white">
             Chunx
           </h1>
-          
+
           <p className="text-center text-neutral-400 mb-12 font-medium tracking-wide">
-            Peer-to-peer file sharing<br className="sm:hidden" /> — no server storage
+            Send large files directly between browsers<br className="sm:hidden" /> — peer-to-peer, no server storage
           </p>
 
           {/* Create Session Button */}
           <button
             onClick={handleCreate}
             disabled={isLoading}
-            className={`w-full py-4 px-6 mb-8 text-base font-semibold text-white rounded-2xl transition-all duration-300 ${
-              isLoading 
-                ? 'bg-neutral-600 cursor-not-allowed shadow-none' 
-                : 'bg-primary hover:bg-blue-500 shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:-translate-y-1'
-            }`}
+            className={`w-full py-4 px-6 mb-8 text-base font-semibold text-white rounded-2xl transition-all duration-300 ${isLoading
+              ? 'bg-neutral-600 cursor-not-allowed shadow-none'
+              : 'bg-primary hover:bg-blue-500 shadow-[0_0_40px_-10px_rgba(37,99,235,0.5)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:-translate-y-1'
+              }`}
           >
             {isLoading ? 'Creating...' : 'Create session'}
           </button>
@@ -122,11 +121,10 @@ function handleJoin() {
             <button
               onClick={handleJoin}
               disabled={isLoading || joinCode.length === 0}
-              className={`py-4 px-8 text-base font-semibold text-white rounded-2xl transition-all duration-300 ${
-                (isLoading || joinCode.length === 0)
-                  ? 'bg-neutral-700 cursor-not-allowed opacity-50'
-                  : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-600/50 hover:-translate-y-1 shadow-[0_0_15px_-5px_rgba(0,0,0,0.5)] hover:shadow-lg'
-              }`}
+              className={`py-4 px-8 text-base font-semibold text-white rounded-2xl transition-all duration-300 ${(isLoading || joinCode.length === 0)
+                ? 'bg-neutral-700 cursor-not-allowed opacity-50'
+                : 'bg-neutral-800 hover:bg-neutral-700 border border-neutral-600/50 hover:-translate-y-1 shadow-[0_0_15px_-5px_rgba(0,0,0,0.5)] hover:shadow-lg'
+                }`}
             >
               {isLoading ? 'Joining...' : 'Join'}
             </button>
@@ -145,7 +143,7 @@ function handleJoin() {
             <ol className="list-decimal pl-5 space-y-1">
               <li>Create a session & share the code</li>
               <li>The other person enters the code</li>
-              <li>Files transfer straight between browsers</li>
+              <li>Send large files straight between browsers</li>
             </ol>
           </div>
         </div>
